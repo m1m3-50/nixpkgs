@@ -11,6 +11,8 @@
   nodejs_24,
   pnpm_11,
   pnpmConfigHook,
+  procps,
+  perl,
   wrapGAppsHook3,
   makeShellWrapper,
   makeBinaryWrapper,
@@ -95,7 +97,7 @@ let
 in
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "buzz-app";
-  version = "0.7.8";
+  version = "0.7.17";
 
   __structuredAttrs = true;
   strictDeps = true;
@@ -104,18 +106,18 @@ rustPlatform.buildRustPackage (finalAttrs: {
     owner = "block";
     repo = "buzz-app";
     tag = "desktop-v${finalAttrs.version}";
-    hash = "sha256-L6IRSa5prmUHOdClfYBLYG1c+paKXZEd4woD5tW9hsk=";
+    hash = "sha256-a6+vPRBmHiXj/EWJJv6szOA/b9p6ATFPT0eWco/PCCE=";
   };
 
   buildAndTestSubdir = "src-tauri";
-  cargoHash = "sha256-R81qkDLinyMMhvthgiiMukBd3oaJ6QKU8d7r8YTTKEA=";
+  cargoHash = "sha256-NAnEfMnsouKE5r6t377wMDNjgXNDU3btKh1/6iPKRoU=";
 
   pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
     # Upstream's package.json pins pnpm 11 (`packageManager`).
     pnpm = pnpm_11;
     fetcherVersion = 5;
-    hash = "sha256-fq1whKE9grOP6P0tvx/joFxoJBVUlrr5STjy+Sl1l5o=";
+    hash = "sha256-IhGS/E2TINPs10OpEY9NNlraUrsXHDH91rQH6dPy+qU=";
   };
 
   patches = [
@@ -145,9 +147,18 @@ rustPlatform.buildRustPackage (finalAttrs: {
     substituteInPlace src-tauri/src/host_command.rs \
       --replace-fail /usr/bin/head ${lib.getExe' coreutils "head"} \
       --replace-fail /usr/bin/tr ${lib.getExe' coreutils "tr"}
+    substituteInPlace src-tauri/src/host_process/tests.rs \
+      --replace-fail /usr/bin/mkfifo ${lib.getExe' coreutils "mkfifo"}
+    substituteInPlace src-tauri/src/host_process/claude_hooks.rs \
+      --replace-fail '"/bin/sleep"' '"${lib.getExe' coreutils "sleep"}"'
+    substituteInPlace crates/agent-command/tests/discovery.rs \
+      --replace-fail '"/bin/bash"' '"${stdenv.shell}"' \
+      --replace-fail '"/bin/sh"' '"${stdenv.shell}"' \
+      --replace-fail '"/usr/bin/touch"' '"${lib.getExe' coreutils "touch"}"' \
+      --replace-fail '"/usr/bin/true"' '"${lib.getExe' coreutils "true"}"'
     # The same for a git shim; https://github.com/block/buzz-app/pull/2417
     # prints the variable with a shell builtin instead.
-    substituteInPlace crates/plugin-manager/src/imports.rs \
+    substituteInPlace crates/plugin-manager/tests/fixtures/ssh-auth-sock.sh \
       --replace-fail /usr/bin/printenv ${lib.getExe' coreutils "printenv"}
   ''
   + lib.optionalString stdenv.hostPlatform.isLinux ''
@@ -239,7 +250,13 @@ rustPlatform.buildRustPackage (finalAttrs: {
     cacert
     gitMinimal
   ]
-  ++ lib.optionals stdenv.hostPlatform.isLinux [ dbus ];
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    dbus
+    # The host process tests find their process groups with pgrep, and the
+    # revocation test holds its output pipes open with perl.
+    procps
+    perl
+  ];
   # macOS: the relay admin tests verify a test certificate through the Security
   # framework, which needs trustd.
   sandboxProfile = ''
