@@ -8,6 +8,7 @@
   cargo-tauri,
   cmake,
   pkg-config,
+  go,
   nodejs_24,
   pnpm_11,
   pnpmConfigHook,
@@ -97,7 +98,7 @@ let
 in
 rustPlatform.buildRustPackage (finalAttrs: {
   pname = "buzz-app";
-  version = "0.7.17";
+  version = "1.0.6";
 
   __structuredAttrs = true;
   strictDeps = true;
@@ -106,18 +107,18 @@ rustPlatform.buildRustPackage (finalAttrs: {
     owner = "block";
     repo = "buzz-app";
     tag = "desktop-v${finalAttrs.version}";
-    hash = "sha256-a6+vPRBmHiXj/EWJJv6szOA/b9p6ATFPT0eWco/PCCE=";
+    hash = "sha256-RsvYf36f2Wl0f870BWHNVTekZ8NJdFaBuQc0XdEHmcI=";
   };
 
   buildAndTestSubdir = "src-tauri";
-  cargoHash = "sha256-NAnEfMnsouKE5r6t377wMDNjgXNDU3btKh1/6iPKRoU=";
+  cargoHash = "sha256-AzEK0VW01dwt7tu7MjGIg7gITV7++yJhcPlcRNWJoYY=";
 
   pnpmDeps = fetchPnpmDeps {
     inherit (finalAttrs) pname version src;
     # Upstream's package.json pins pnpm 11 (`packageManager`).
     pnpm = pnpm_11;
     fetcherVersion = 5;
-    hash = "sha256-IhGS/E2TINPs10OpEY9NNlraUrsXHDH91rQH6dPy+qU=";
+    hash = "sha256-az8tuM9xtIoGoZ1aJ2/rtgrNJsiCE+iMYtCc4MeKmDI=";
   };
 
   patches = [
@@ -169,6 +170,9 @@ rustPlatform.buildRustPackage (finalAttrs: {
   '';
 
   nativeBuildInputs = [
+    # aws-lc-sys 0.45 (upstream's 1.0 bump) needs Go to generate its cmake
+    # sources even with AWS_LC_SYS_CMAKE_BUILDER.
+    go
     cmake
     pkg-config
     cargo-tauri.hook
